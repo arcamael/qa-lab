@@ -1,0 +1,21 @@
+# node
+node_modules/
+# playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+results.json
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+dist/
+build/
+# env
+.env
+# macOS
+.DS_Store

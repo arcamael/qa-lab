@@ -1,0 +1,19 @@
+{
+  "name": "qa-lab-starter-playwright-ts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Generalized Playwright + TypeScript starter for a new SUT. Copy into a SUT repo, set BASE_URL, implement product-specific page objects and API helpers.",
+  "scripts": {
+    "test": "playwright test",
+    "test:api": "playwright test --project=api",
+    "test:ui": "playwright test --project=chromium-ui",
+    "typecheck": "tsc --noEmit",
+    "report": "playwright show-report",
+    "codegen": "playwright codegen ${BASE_URL:-http://localhost:3000}"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}
