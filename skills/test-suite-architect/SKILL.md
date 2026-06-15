@@ -1,6 +1,6 @@
 ---
 name: test-suite-architect
-description: Generate a SAMPLE multi-dimensional test suite (functional, API, performance, security, compliance, accessibility, reliability, and more) for any software product, designed for a human to review and adjust before scaling to full coverage. Use this whenever the user wants to test a product, app, service, or System Under Test (SUT); asks for a test plan, test strategy, test coverage, QA approach, or "what should I test"; wants test cases or automated tests generated; is bootstrapping QA for a new or unfamiliar codebase; or simply says "write tests for X" without naming the types. Trigger it even when only one test type is mentioned, because part of the job is surfacing the types the user did not think to ask for.
+description: Generate a SAMPLE multi-dimensional test suite (functional, API, performance, security, compliance, accessibility, reliability, and more) for any software product, designed for a human to review and adjust before scaling to full coverage. Use this whenever the user wants to test a product, app, service, or System Under Test (SUT); asks for a test plan, test strategy, test coverage, QA approach, or "what should I test"; wants test cases or automated tests generated; is bootstrapping QA for a new or unfamiliar codebase; or simply says "write tests for X" without naming the types. Trigger it even when only one test type is mentioned, because part of the job is surfacing the types the user did not think to ask for. Also triggers in SECOND-ITERATION mode: when given a review-report.json from the review-test-suite skill, it revises an existing suite by applying the human-approved architect_actions.
 ---
 
 # Test Suite Architect
@@ -71,7 +71,22 @@ Present the sample and the review packet. Explicitly invite the human to adjust 
 - **No fabricated facts.** If you assumed a stack detail, an endpoint shape, or a requirement, it goes in Assumptions — never presented as established fact.
 - **Sample, not coverage.** If you find yourself generating the tenth functional test before crossing the review gate, stop. That is full-coverage behavior in the wrong phase.
 
+## Second-iteration mode (closing the loop with review-test-suite)
+
+This skill has two modes. Everything above is **generation mode** (first pass). When you are given
+a `review-report.json` (the artifact emitted by the `review-test-suite` skill), switch to
+**second-iteration mode** and read `references/iteration.md`.
+
+In brief: you act ONLY on `architect_actions` where `human_approved == true` — the human curates
+the queue at the gate; you never act on un-approved actions, and nothing auto-executes. Apply each
+approved action (add_test / modify_test / remove_test / refactor / add_fixture / parameterize)
+following the same house style and guardrails as generation mode, writing changes where the action
+`target` specifies (generated tests stay quarantined from the human-verified baseline). Respect the
+loop cap of **2 cycles** defined in `qa-lab/contracts/severity-priority.yaml`. After applying, hand
+the revised suite back for the next review or for final human sign-off.
+
 ## Reference files
 
 - `references/test-types.md` — the discipline taxonomy: when each applies, what a sample looks like, tooling, and how it expands to full coverage. Read in Step 2 and Step 3.
 - `references/output-format.md` — sample directory layout, house style / stack defaults, annotation conventions, and the `REVIEW.md` template. Read in Step 3 and Step 4.
+- `references/iteration.md` — second-iteration mode: how to ingest a `review-report.json` and apply human-approved `architect_actions`. Read whenever a review report is provided.
