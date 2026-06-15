@@ -1,0 +1,29 @@
+# Canonical severity scale, severity->priority mapping, and loop gate. Owned by qa-lab.
+schema_version: "1.0"
+
+# Five-level severity scale (review-test-suite findings use these).
+severities: [blocker, critical, major, minor, info]
+
+# Architect schedules its work queue by priority. This mapping is authoritative and
+# overridable per repo via quality-policy.yaml.
+severity_to_priority:
+  blocker: P0
+  critical: P1
+  major: P2
+  minor: P3
+  info: P4
+
+# Loop control.
+loop:
+  max_cycles: 2            # hard cap: at most two review->update cycles
+  auto_execute: false      # NOTHING auto-executes in v1; human curates every action
+  # The loop is considered converged (human may stop early) when neither condition holds:
+  stop_when_clear:
+    blockers: 0
+    critical: 0
+    major_coverage_gaps: 0
+
+# CI gate (used by quality-policy profiles): fail the build if either is true.
+ci_gate:
+  fail_if_overall_health_below: 70
+  fail_if_any: [blocker, critical]

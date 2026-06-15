@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qa-lab/contracts/review-report.schema.json",
+  "title": "review-report",
+  "description": "Canonical artifact emitted by review-test-suite and ingested by test-suite-architect.",
+  "type": "object",
+  "required": ["schema_version", "review_id", "reviewed_at", "suite_summary", "scorecard", "findings", "coverage_gaps", "architect_actions", "metrics"],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "review_id": { "type": "string" },
+    "reviewed_at": { "type": "string", "description": "ISO-8601" },
+    "cycle": { "type": "integer", "minimum": 1, "description": "Which review cycle this is (1 or 2)." },
+    "suite_summary": {
+      "type": "object",
+      "required": ["languages", "frameworks", "test_counts_by_type", "total_tests"],
+      "properties": {
+        "languages": { "type": "array", "items": { "type": "string" } },
+        "frameworks": { "type": "array", "items": { "type": "string" } },
+        "test_counts_by_type": { "type": "object", "additionalProperties": { "type": "integer" } },
+        "total_tests": { "type": "integer" }
+      }
+    },
+    "scorecard": {
+      "type": "object",
+      "required": ["overall_health_score", "overall_confidence", "dimensions", "coverage_matrix"],
+      "properties": {
+        "overall_health_score": { "type": "number", "minimum": 0, "maximum": 100 },
+        "overall_confidence": { "enum": ["high", "medium", "low"] },
+        "go_no_go": { "enum": ["go", "no-go"] },
+        "dimensions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "score", "confidence"],
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "score": { "type": "number", "minimum": 0, "maximum": 100 },
+              "confidence": { "enum": ["high", "medium", "low"] }
+            }
+          }
+        },
+        "coverage_matrix": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["test_type", "present", "adequacy", "risk"],
+            "properties": {
+              "test_type": { "type": "string" },
+              "present": { "type": "boolean" },
+              "adequacy": { "enum": ["adequate", "weak", "missing"] },
+              "risk": { "enum": ["high", "medium", "low"] }
+            }
+          }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "dimension", "severity", "location", "description", "recommendation"],
+        "properties": {
+          "id": { "type": "string", "description": "F-####" },
+          "dimension": { "type": "string", "description": "D1..D14" },
+          "test_type": { "type": "string" },
+          "severity": { "enum": ["blocker", "critical", "major", "minor", "info"] },
+          "source": { "enum": ["static", "dynamic"], "default": "static", "description": "Reserved for the future dynamic reviewer (Option B). v1 emits 'static'." },
+          "smell": { "type": "string" },
+          "location": {
+            "type": "object",
+            "properties": {
+              "file": { "type": "string" },
+              "test_id": { "type": "string" },
+              "line": { "type": "integer" }
+            }
+          },
+          "description": { "type": "string" },
+          "evidence": { "type": "string", "description": "Snippet location/type only; NEVER the value of a detected secret." },
+          "recommendation": { "type": "string" },
+          "effort": { "enum": ["trivial", "small", "medium", "large"] },
+          "references": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "coverage_gaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "area", "test_type", "risk", "missing_scenarios", "rationale"],
+        "properties": {
+          "id": { "type": "string", "description": "G-####" },
+          "area": { "type": "string" },
+          "test_type": { "type": "string" },
+          "risk": { "enum": ["high", "medium", "low"] },
+          "missing_scenarios": { "type": "array", "items": { "type": "string" } },
+          "rationale": { "type": "string" }
+        }
+      }
+    },
+    "architect_actions": {
+      "type": "array",
+      "description": "The architect's work queue. Human-curated at every gate; nothing auto-executes in v1.",
+      "items": {
+        "type": "object",
+        "required": ["id", "action_type", "priority", "rationale", "linked_findings", "spec"],
+        "properties": {
+          "id": { "type": "string", "description": "A-####" },
+          "action_type": { "enum": ["add_test", "modify_test", "remove_test", "refactor", "add_fixture", "parameterize"] },
+          "priority": { "enum": ["P0", "P1", "P2", "P3", "P4"] },
+          "target": {
+            "type": "object",
+            "properties": {
+              "suggested_path": { "type": "string" },
+              "file": { "type": "string" },
+              "test_id": { "type": "string" }
+            }
+          },
+          "linked_findings": { "type": "array", "items": { "type": "string" } },
+          "rationale": { "type": "string" },
+          "human_approved": { "type": "boolean", "default": false, "description": "Set true by the human gate. The architect acts ONLY on approved actions." },
+          "spec": {
+            "type": "object",
+            "description": "Self-contained enough for the architect to implement without re-deriving intent.",
+            "properties": {
+              "test_type": { "type": "string" },
+              "scenarios": { "type": "array", "items": { "type": "string" } },
+              "preconditions": { "type": "array", "items": { "type": "string" } },
+              "expected_assertions": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "flakiness_risk_index": { "type": "number" },
+        "redundancy_pct": { "type": "number" },
+        "avg_assertions_per_test": { "type": "number" },
+        "pyramid_distribution": { "type": "object", "additionalProperties": { "type": "number" } },
+        "traceability_pct": { "type": "number" },
+        "skipped_test_count": { "type": "integer" }
+      }
+    }
+  }
+}
