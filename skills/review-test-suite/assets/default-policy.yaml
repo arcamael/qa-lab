@@ -1,0 +1,44 @@
+# Default quality policy. A repo-level quality-policy.yaml overrides these.
+schema_version: "1.0"
+profile: default
+
+# Per-dimension weights (sum need not be 1; the renderer normalizes). 0 disables a dimension.
+weights:
+  D1: 3   # coverage & traceability
+  D2: 2
+  D3: 3   # assertion quality (highest-leverage)
+  D4: 3   # determinism / flakiness
+  D5: 2
+  D6: 3   # test data / secrets
+  D7: 1
+  D8: 2
+  D9: 1
+  D10: 1
+  D11: 3  # security
+  D12: 1
+  D13: 1
+  D14: 2
+
+# Severity defaults can be overridden per smell here.
+severity_overrides: {}
+
+# Gate (mirrors qa-lab/contracts/severity-priority.yaml; policy may tighten).
+gate:
+  fail_if_overall_health_below: 70
+  fail_if_any: [blocker, critical]
+
+# Profiles select weighting + required types + gate strictness.
+profiles:
+  default:
+    required_test_types: [unit, integration, e2e]
+  regulated:
+    required_test_types: [unit, integration, e2e, security, compliance, privacy]
+    weights_boost: { D11: +2, D12: +2, D6: +1 }
+    gate: { fail_if_overall_health_below: 85 }
+  startup-mvp:
+    required_test_types: [unit, e2e]
+    gate: { fail_if_overall_health_below: 50 }
+  agentic-ai-system:
+    required_test_types: [unit, integration, e2e, security, ai-ml]
+    weights_boost: { D11: +1 }
+    extra_dimensions_note: "Assess ai-ml coverage: eval-sets, prompt-injection robustness, grounding, output-schema, drift."
