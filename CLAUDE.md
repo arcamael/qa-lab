@@ -14,7 +14,14 @@ is the source of truth for what to build next, in what order, with acceptance cr
 
 ## Layout
 - `skills/test-suite-architect/` — portable Claude skill: generates a *sample* multi-discipline
-  test suite for a product, for human review before full coverage.
+  test suite for a product, for human review before full coverage. Has a second-iteration mode
+  that ingests a `review-report.json` and applies human-approved `architect_actions`.
+- `skills/review-test-suite/` — portable Claude skill: statically reviews an existing suite and
+  emits a `review-report.json` (findings + curated `architect_actions`), the reviewer counterpart
+  that closes the generate→review→update loop with `test-suite-architect`.
+- `contracts/` — toolkit-owned, language-neutral seam both skills reference: the
+  `review-report.schema.json` artifact contract and `severity-priority.yaml` (severity scale,
+  severity→priority mapping, loop gate + termination rules). `qa-lab` owns the one true copy.
 - `starters/playwright-ts/` — generalized Playwright + TypeScript baseline. Own toolchain
   (`package.json`). Product-agnostic; copied into a SUT repo and specialized there.
 - `orchestrator-py/` — the Python "brain" (Phase 2+). Own toolchain (`pyproject.toml`). Reads
