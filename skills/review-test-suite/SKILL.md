@@ -13,9 +13,36 @@ work queue the architect implements after a human curates it.
 
 ## Scope (v1, Option A)
 - **Static only.** Read test files and optional auxiliary inputs. Do NOT execute tests or the SUT.
-- Where dynamic data exists (coverage report, CI flakiness history), **consume it as input** to
-  raise confidence — never generate it. The schema reserves `source: "static" | "dynamic"` on
-  findings so a future dynamic reviewer can contribute into the same artifact; v1 emits `"static"`.
+- Where dynamic data exists (coverage report, CI flakiness history, observability metrics),
+  **consume it as input** to raise confidence — never generate it. The schema reserves
+  `source: "static" | "dynamic"` on findings so a future dynamic reviewer can contribute into the
+  same artifact; v1 emits `"static"` for everything **except** performance findings grounded in
+  measured metrics (see the performance-grounding bullet), which carry `source: "dynamic"` to be
+  honest about provenance.
+- **API spec as a coverage oracle (read-only).** If an OpenAPI/Swagger MCP server is available, you
+  may read the spec to learn the API's *full* declared surface (endpoints × methods, schemas, auth)
+  and measure the suite against it. This stays within static-only: a spec is a declarative artifact,
+  not the running SUT — treat it as an auxiliary input, prefer the committed spec file, and if only
+  a live URL exists, do a single read-only fetch of the spec document. **Never** drive endpoints,
+  send non-spec requests, or otherwise exercise the SUT. Findings grounded this way are still
+  `source: "static"`, and the spec feeds **coverage gaps only** (Step 2's coverage matrix / D1) —
+  not new test execution.
+- **Static security findings as a security-coverage oracle (read-only).** If a **static** security
+  MCP is available — SAST (Semgrep, CodeQL) or SCA (OSV, Snyk, Trivy) — you may read its findings to
+  learn where real risk concentrates (injection sinks, vulnerable deps, secret/PII locations) and
+  measure whether the suite tests those. Same boundary as the spec: these are declarative reports,
+  not the running SUT. **Never** wire active DAST (ZAP/Burp) or run any scan/attack — consume only
+  pre-produced static findings. Use them to sharpen **D11** (security coverage) and **D6** (secrets);
+  for secrets, report *location and type only*, never the value. All such findings are `source:
+  "static"` and feed coverage gaps, not test execution.
+- **Performance grounding via observability (read-only).** If an observability/APM MCP is available
+  (Prometheus, Grafana, Datadog), you may query it to learn real SLO/latency **targets** and traffic
+  **weighting**, then judge whether the suite load-tests the endpoints that matter and whether its
+  thresholds match reality. **Never** wire or run a load-runner (k6/JMeter) — query metrics only,
+  never generate load. Split provenance honestly: findings grounded in **declarative SLO/budget
+  config** are `source: "static"`; findings grounded in **measured latency/throughput metrics** are
+  `source: "dynamic"` (this is the one v1 case that emits `"dynamic"`). These feed **D1** (perf
+  coverage vs hot paths) and **D3** (threshold sanity), as coverage/assertion findings — not runs.
 
 ## The most important principles
 - **Anchor to the architect's own declared scope.** When reviewing output from `test-suite-architect`,
@@ -38,8 +65,14 @@ work queue the architect implements after a human curates it.
 ### Step 1 — Intake & classify (scripts)
 Run `scripts/classify_suite.py <path>` to walk the tree, detect languages/frameworks, and classify
 each file by the taxonomy in `references/taxonomy.md`. Note any auxiliary inputs the user supplied
-(requirements, risk register, coverage report, CI/flakiness history, repo quality policy). Missing
-aux inputs lower confidence; they are not errors.
+(requirements, risk register, coverage report, CI/flakiness history, repo quality policy, **API spec
+via OpenAPI/Swagger MCP or a committed spec file**, **static security findings via a SAST/SCA MCP or
+a committed report**, **SLO targets + traffic metrics via an observability/APM MCP or committed SLO
+config**). Missing aux inputs lower confidence; they are not errors. When an API spec is
+available, capture its full endpoint × method list as the denominator for API coverage in Step 2;
+when static security findings are available, capture the risk locations (injection sinks, vulnerable
+deps, secret/PII sites) to test security coverage against in Step 2; when observability is available,
+capture real SLO/latency targets and traffic-weighted hot endpoints for the perf checks in Step 2.
 
 ### Step 2 — Gather deterministic facts (scripts)
 Run, against the same path:
@@ -48,6 +81,16 @@ Run, against the same path:
   flakiness-risk index.
 - `scripts/build_coverage_matrix.py` — presence/adequacy/risk per taxonomy category.
 These emit JSON to stdout (or a file). Treat their output as ground-truth facts you reason over.
+When an API spec was captured in Step 1, measure the suite's exercised endpoints against the spec's
+full surface and record untested endpoints/resources as concrete API `coverage_gaps` (e.g. "8 of 41
+documented endpoints tested") — a countable, spec-grounded denominator beats inferring coverage from
+test files alone. Likewise, when static security findings were captured, measure how many real risk
+locations the suite tests and record the untested ones as security `coverage_gaps` (e.g. "SAST
+reports 4 injection sinks; 0 are tested") feeding D11/D6 — both `source: "static"`. When
+observability was captured, record perf `coverage_gaps` for traffic-weighted hot endpoints with no
+load test (D1) and threshold-mismatch findings where a test asserts a bound looser than the real SLO
+(D3, e.g. "asserts p95 < 2000ms but SLO is 500ms"); tag findings grounded in **measured metrics**
+`source: "dynamic"` and those grounded in **declarative SLO config** `source: "static"`.
 
 ### Step 3 — Judge (you)
 Read `references/quality-model.md` (the 14 dimensions, D1–D14) and the active policy

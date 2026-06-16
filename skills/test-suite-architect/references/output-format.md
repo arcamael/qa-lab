@@ -37,6 +37,7 @@ Match the product's existing conventions when they exist. When starting fresh, d
 - **Machine-readable results**: emit a JSON report (e.g. Playwright's `json` reporter to `results.json`) so an orchestrator can consume outcomes downstream.
 - **Performance**: k6 scripts. **Security authz/authn/input**: the same test framework as API. **a11y**: axe-core. **Visual**: framework-native snapshots.
 - **Non-code disciplines** (usability, manual compliance controls): a concrete Markdown checklist or charter in `specs/`, plus any automatable subset as code.
+- **Ground selectors in reality**: when a Playwright MCP server was used to explore the running SUT, base UI locators on the observed accessibility-tree roles/labels rather than guessed CSS; selectors you could not verify against a live instance belong in the Assumptions list, not presented as fact.
 
 If the product's stack makes a different choice clearly better (Python service → pytest + httpx + Playwright-python; gRPC → buf/ghz; mobile → Appium), use it and note the deviation in REVIEW.md.
 
