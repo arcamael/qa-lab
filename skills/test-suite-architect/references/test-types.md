@@ -36,6 +36,7 @@ The service contracts beneath the UI, and the seams between services.
 - **Applies when**: the product exposes or consumes an API, or has more than one service.
 - **Sample shape**: one positive + one negative per critical endpoint (auth: valid login returns a token; wrong password returns 401). Assert *shape/contract* — status, schema, key fields — not exact data values, which are brittle.
 - **Tooling**: Playwright APIRequestContext, REST Assured, Postman/newman, Pact (consumer-driven contracts), schema validators.
+- **Grounding**: if an OpenAPI/Swagger MCP server is available, read the spec to enumerate real endpoints, methods, params, schemas, status codes, and auth — generate one positive + one negative per critical endpoint grounded in the declared shapes rather than guessed ones. The spec is the *declared* contract, not the *observed* one: where you can also probe the live API, treat any drift between spec and reality as a finding, and record endpoints you could not verify in Assumptions. (This is the API-layer analogue of grounding UI tests via Playwright MCP — static contract vs. live behavior.)
 - **Full-coverage expansion**: all endpoints × methods × auth states; schema/contract tests for every consumer; pagination, rate limits, error taxonomy, idempotency keys.
 - **Automation**: very high — cheapest reliable layer, prefer it over UI wherever a behavior can be verified here.
 
@@ -52,14 +53,26 @@ Behavior under realistic and stressful demand.
 - **Applies when**: there are latency/throughput/availability SLOs, meaningful traffic, or a known scaling concern. **Defer** for early prototypes with no SLOs — say so explicitly.
 - **Sample shape**: one baseline latency check on a key endpoint (assert p95 under a target), and one small load scenario sketch (N virtual users for M seconds) — clearly labeled as a sample to validate the *approach*, not a real capacity test.
 - **Tooling**: k6, JMeter, Gatling, Locust.
+- **Grounding**: if an observability/APM MCP is available (Prometheus, Grafana, Datadog), **read-only**, query it to ground two guesses: real SLO/latency **targets** (set the assertion threshold to the actual target or current baseline, not an invented number) and traffic **weighting** (load-test the endpoints that actually carry traffic — pair with the OpenAPI MCP for the endpoint inventory). Do **not** wire a load-runner MCP (k6/JMeter that *executes* load) — generating load is dynamic, intrusive, and a full-coverage CI job; the sample's deliverable is the load *script*, not a run.
 - **Full-coverage expansion**: load, stress, spike, soak/endurance, scalability curves; per-SLO assertions; resource-saturation profiling.
 - **Automation**: high, but environment-sensitive; usually a separate pipeline.
+- **Setting thresholds honestly** (so the sample teaches the right thing):
+  - **Anchor thresholds to a measured baseline, not a guess.** Take a quick single-user latency
+    reading first, then set the SLO with explicit headroom over it. State the baseline.
+  - **If no SLOs exist, invented ones are fine — but label them.** Put proposed SLOs in the review
+    packet's Assumptions and flag that real targets need confirmation; never present them as given.
+  - **Report capacity as throughput-per-instance (rps), not a VU count.** Under a closed (no
+    think-time) model, latency past saturation is just `concurrency / throughput` (Little's Law);
+    the actionable number for capacity planning is the rps ceiling, which sizes instances.
+  - **Note the load model.** Closed (looping VUs) vs open (arrival rate) answer different questions;
+    say which you used. A localhost run validates the *harness*, not production performance — say so.
 
 ## 5. Security
 That the product resists misuse and protects what it holds. **Defensive only** — assert defenses hold; never produce weaponized exploits.
 - **Applies when**: always at a baseline; depth scales with exposure, authentication, multi-tenancy, and data sensitivity.
 - **Sample shape**: one authn test (protected resource requires a valid token), one authz test (user A cannot read user B's resource — the classic IDOR/broken-object-level-auth check), and one input-handling test (a known-bad payload is *rejected or neutralized*, asserting the secure outcome).
 - **Tooling**: API/UI test frameworks for authz/authn; OWASP ZAP for DAST; dependency/SCA scanners (npm audit, Snyk, Trivy); secret scanners (gitleaks).
+- **Grounding**: if a **static** security MCP is available — SAST (Semgrep, CodeQL) or SCA (OSV, Snyk, Trivy) — read its findings to target the sample at *real* risk concentrations (where injection sinks, vulnerable deps, and weak auth actually are) rather than guessing. Write a **defensive** test asserting the secure outcome for each — on an intentionally-vulnerable SUT that test correctly fails and documents the gap. Grounding stays read-only and `source: "static"`: do **not** wire active DAST (ZAP/Burp) here — running attacks against the SUT is dynamic testing, not generation, and risks weaponization. Active scanning belongs in full-coverage CI, not the sample.
 - **Full-coverage expansion**: full OWASP Top 10 / ASVS coverage, role matrix, session and token lifecycle, rate limiting and lockout, dependency and container scanning in CI.
 - **Automation**: high for authz/authn/input and SCA; DAST semi-automated; pen-test is human.
 

@@ -41,7 +41,7 @@ Build an accurate picture of the product before proposing anything. Gather (from
 - **Access**: can tests reach a running instance, an API, a test environment, seed data?
 - **Existing tests & house style**: what's already there; conventions to match.
 
-If you can probe a running instance or read the code, do so — grounding beats guessing. When a fact is unavailable, make the most reasonable assumption, **record it in the review packet's Assumptions list, and proceed** rather than blocking. Ask the human only for things that genuinely change the approach and that you cannot infer.
+If you can probe a running instance or read the code, do so — grounding beats guessing. **If a Playwright MCP server is available and the SUT is running, use it to ground discovery**: navigate the primary journeys, snapshot the accessibility tree to capture *real* roles, labels, and selectors, and observe the actual auth flow and network calls. Prefer these observed facts over inference — this is what separates mostly-runnable output from hopeful guesses. When a fact is unavailable (no MCP, no running instance, or a surface you could not reach), make the most reasonable assumption, **record it in the review packet's Assumptions list, and proceed** rather than blocking. Ask the human only for things that genuinely change the approach and that you cannot infer.
 
 ### Step 2 — Build the applicability map
 
@@ -54,6 +54,7 @@ Read `references/output-format.md` for the exact layout, naming, and annotation 
 - Cover **every discipline marked "applies"**, ordered by risk rank.
 - **1–3 sample tests per discipline** — enough to show the shape and the tooling, not enough to be coverage. Resist the urge to be thorough here; thoroughness is for full coverage, after review.
 - Make code-expressible tests **real and runnable** against the SUT where possible, following the house style in references/output-format.md. For disciplines that are partly or wholly manual (usability, some compliance controls), produce a concrete checklist or spec plus whatever automatable subset exists.
+- **Ground browser-layer tests in what you observed via Playwright MCP** (when available): base locators on the captured accessibility-tree roles and labels, not guessed CSS. MCP is for observing and driving the SUT to inform the code — the deliverable is still real, owned Playwright TypeScript, never opaque runtime magic, and grounding does **not** relax the human-review gate. Keep honoring "cheapest reliable layer": reach for the browser only for behaviors that genuinely need a rendered UI; API/contract checks come first.
 - Annotate each test per the convention: *what it checks*, *why this discipline applies here*, *full-coverage expansion*.
 
 ### Step 4 — Produce the review packet (the human gate)
