@@ -20,11 +20,13 @@ sources:
   static: true            # SARIF / npm-audit / Trivy-OSV / lint  (see references/static-sources.md)
   review_report: false    # also ingest review-test-suite's review-report.json findings (optional)
 
-# Failures expected by design — never filed unless explicitly opted in.
+# Failures expected by design.
 known_gaps:
-  # On an intentionally-vulnerable/training SUT, defensive security reds are documented gaps.
-  file_intentional_security_fails: false
-  # Add fingerprints or test-title globs to always treat as known gaps:
+  # File intentional/defensive security reds too — a real security gap is worth tracking even on an
+  # intentionally-vulnerable SUT, and on a real product these are never "intentional" anyway. Set to
+  # false (per-repo via quality-policy.yaml) for pure training use where the challenge list is noise.
+  file_intentional_security_fails: true
+  # Add fingerprints or test-title globs to always treat as known gaps (always suppressed):
   ignore_fingerprints: []
   ignore_title_globs: []
 
