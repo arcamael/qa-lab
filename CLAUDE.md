@@ -19,9 +19,14 @@ is the source of truth for what to build next, in what order, with acceptance cr
 - `skills/review-test-suite/` — portable Claude skill: statically reviews an existing suite and
   emits a `review-report.json` (findings + curated `architect_actions`), the reviewer counterpart
   that closes the generate→review→update loop with `test-suite-architect`.
-- `contracts/` — toolkit-owned, language-neutral seam both skills reference: the
-  `review-report.schema.json` artifact contract and `severity-priority.yaml` (severity scale,
-  severity→priority mapping, loop gate + termination rules). `qa-lab` owns the one true copy.
+- `skills/bug-reporter/` — portable Claude skill: triages Playwright `results.json` failures and
+  static-analysis findings (SARIF/SCA/lint), validates and deduplicates them, and auto-files the real
+  defects (and flaky tests, tagged `flaky_test`) as GitHub issues. Emits a `bug-report.json` audit
+  artifact. Defensive-security only; mandatory validity + dedup gates.
+- `contracts/` — toolkit-owned, language-neutral seam the skills reference: the
+  `review-report.schema.json` and `bug-report.schema.json` artifact contracts and
+  `severity-priority.yaml` (severity scale, severity→priority mapping, loop gate + termination rules).
+  `qa-lab` owns the one true copy.
 - `starters/playwright-ts/` — generalized Playwright + TypeScript baseline. Own toolchain
   (`package.json`). Product-agnostic; copied into a SUT repo and specialized there.
 - `orchestrator-py/` — the Python "brain" (Phase 2+). Own toolchain (`pyproject.toml`). Reads

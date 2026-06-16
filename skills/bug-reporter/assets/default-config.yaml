@@ -1,0 +1,46 @@
+# Default config for the bug-reporter skill. Override per repo with quality-policy.yaml.
+schema_version: "1.0"
+
+tracker:
+  kind: github            # github | artifact-only | linear | jira
+  repo: ""                # owner/name; empty => infer from `gh repo view` / the SUT
+
+filing:
+  auto_file: true         # file validated, novel bugs without a human gate (per skill config)
+  dry_run: false          # true => compose + emit artifact, create NOTHING. Use for first run on a new repo.
+  max_per_run: 20         # hard cap on issues created in a single run (anti-flood safety)
+  reopen_regressions: false  # if a closed issue's fingerprint recurs, flag it rather than auto-reopen
+
+# Which classes get filed. Only these two are ever fileable.
+file_classes: [product-bug, flaky-test]
+file_flaky: true          # file flaky tests as their own issues, label flaky_test
+
+sources:
+  test_failures: true     # Playwright results.json
+  static: true            # SARIF / npm-audit / Trivy-OSV / lint  (see references/static-sources.md)
+  review_report: false    # also ingest review-test-suite's review-report.json findings (optional)
+
+# Failures expected by design — never filed unless explicitly opted in.
+known_gaps:
+  # On an intentionally-vulnerable/training SUT, defensive security reds are documented gaps.
+  file_intentional_security_fails: false
+  # Add fingerprints or test-title globs to always treat as known gaps:
+  ignore_fingerprints: []
+  ignore_title_globs: []
+
+labels:
+  base: [bug]
+  flaky: [flaky_test]
+  # severity -> label and priority -> label (priority via contracts/severity-priority.yaml)
+  severity_prefix: "severity:"
+  priority_prefix: "priority:"
+  discipline_map:        # source/discipline -> label
+    test-failure: triage
+    sast: security
+    sca: security
+    secret: security
+    lint: code-quality
+    perf-result: performance
+
+# Severity is taken from the source then RE-RATED by blast radius in this SUT (judgment).
+# The severity->priority mapping is authoritative in qa-lab/contracts/severity-priority.yaml.

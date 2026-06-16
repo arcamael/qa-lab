@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qa-lab/contracts/bug-report.schema.json",
+  "title": "bug-report run artifact",
+  "description": "The canonical, toolkit-owned artifact emitted by the bug-reporter skill: every candidate defect it considered, how it was triaged, and what it did (filed / skipped-as-duplicate / rejected). Auditable and machine-consumable (the orchestrator reads it for triage-precision metrics). Owned by qa-lab; both bug-reporter and downstream tools reference this one copy.",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "tracker", "config", "candidates", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "sut": {
+      "type": "object",
+      "description": "The system under test this run is about.",
+      "additionalProperties": true,
+      "properties": {
+        "repo": { "type": "string", "description": "owner/name of the GitHub repo issues are filed into" },
+        "base_url": { "type": "string" },
+        "commit": { "type": "string" }
+      }
+    },
+    "tracker": {
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["github", "artifact-only", "linear", "jira"] },
+        "repo": { "type": "string" }
+      }
+    },
+    "config": {
+      "type": "object",
+      "description": "Effective config for this run (from default-config.yaml + overrides).",
+      "additionalProperties": true,
+      "properties": {
+        "auto_file": { "type": "boolean" },
+        "dry_run": { "type": "boolean" },
+        "max_per_run": { "type": "integer", "minimum": 0 },
+        "file_flaky": { "type": "boolean" }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/candidate" }
+    },
+    "filed": {
+      "type": "array",
+      "description": "Candidates that resulted in a NEW issue this run.",
+      "items": {
+        "type": "object",
+        "required": ["fingerprint", "issue_url"],
+        "additionalProperties": false,
+        "properties": {
+          "fingerprint": { "type": "string" },
+          "issue_url": { "type": "string" },
+          "issue_number": { "type": "integer" },
+          "labels": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "skipped_duplicates": {
+      "type": "array",
+      "description": "Candidates that matched an already-existing issue (link, do not refile).",
+      "items": {
+        "type": "object",
+        "required": ["fingerprint", "existing_issue"],
+        "additionalProperties": false,
+        "properties": {
+          "fingerprint": { "type": "string" },
+          "existing_issue": { "type": "string" },
+          "match_reason": { "type": "string" }
+        }
+      }
+    },
+    "rejected": {
+      "type": "array",
+      "description": "Candidates judged NOT a fileable product/flaky bug (test-bug, environment, known-intentional gap, low-signal), with the reason. This is the precision audit trail.",
+      "items": {
+        "type": "object",
+        "required": ["fingerprint", "classification", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "fingerprint": { "type": "string" },
+          "classification": { "$ref": "#/$defs/classification" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["candidates", "filed", "duplicates", "rejected"],
+      "additionalProperties": true,
+      "properties": {
+        "candidates": { "type": "integer" },
+        "filed": { "type": "integer" },
+        "duplicates": { "type": "integer" },
+        "rejected": { "type": "integer" },
+        "flaky_filed": { "type": "integer" }
+      }
+    }
+  },
+  "$defs": {
+    "classification": {
+      "type": "string",
+      "enum": ["product-bug", "flaky-test", "test-bug", "environment", "known-gap", "low-signal"]
+    },
+    "candidate": {
+      "type": "object",
+      "required": ["id", "source", "fingerprint", "classification", "severity", "title"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "source": {
+          "type": "string",
+          "enum": ["test-failure", "sast", "sca", "secret", "lint", "review-report", "perf-result"]
+        },
+        "fingerprint": {
+          "type": "string",
+          "description": "Stable signature for dedup: a hash over the normalized error + location/signature, robust to run-specific noise (timestamps, ids, ports)."
+        },
+        "classification": { "$ref": "#/$defs/classification" },
+        "validity": {
+          "type": "object",
+          "required": ["verdict", "confidence"],
+          "additionalProperties": false,
+          "properties": {
+            "verdict": { "type": "string", "enum": ["valid", "invalid", "uncertain"] },
+            "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+            "rationale": { "type": "string" }
+          }
+        },
+        "severity": { "type": "string", "enum": ["blocker", "critical", "major", "minor", "info"] },
+        "priority": { "type": "string", "enum": ["P0", "P1", "P2", "P3", "P4"] },
+        "title": { "type": "string" },
+        "location": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "file": { "type": "string" },
+            "line": { "type": "integer" },
+            "test_id": { "type": "string" },
+            "endpoint": { "type": "string" },
+            "rule_id": { "type": "string" }
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "description": "Pointers to proof (trace, screenshot, log excerpt, SARIF region). Never includes secret/PII values — location and type only.",
+          "items": { "type": "string" }
+        },
+        "labels": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

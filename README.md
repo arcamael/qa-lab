@@ -13,8 +13,9 @@ this one.
 qa-lab/
 ├── skills/               # portable Claude skills (SKILL.md + references)
 │   ├── test-suite-architect/  # generate a sample suite; + second-iteration mode
-│   └── review-test-suite/     # review a suite; emit review-report.json
-├── contracts/            # toolkit-owned seam both skills share (schema + severity/priority policy)
+│   ├── review-test-suite/     # review a suite; emit review-report.json
+│   └── bug-reporter/          # triage failures + static findings; file deduped GitHub issues
+├── contracts/            # toolkit-owned seam the skills share (artifact schemas + severity/priority policy)
 ├── starters/             # clone-me scaffolds for a new SUT
 │   └── playwright-ts/     # generalized Playwright + TS baseline (own toolchain)
 ├── packages/             # shared helpers, extracted from starters when reuse appears
@@ -37,14 +38,16 @@ qa-lab/
 ## Using the skills
 
 A skill is a portable `SKILL.md` folder that works across Claude.ai, Claude Code, and the API.
-Two skills form a loop: `test-suite-architect` generates a sample suite, `review-test-suite`
-reviews it and emits a `review-report.json`, and the architect's second-iteration mode applies
-the human-approved actions from that report — communicating only through `contracts/`.
+The skills form a QA loop, communicating only through `contracts/`: `test-suite-architect` generates
+a sample suite, `review-test-suite` reviews it and emits a `review-report.json` (which the architect's
+second-iteration mode applies after human approval), and `bug-reporter` triages the resulting test
+failures and static-analysis findings into validated, deduplicated GitHub issues.
 
 - **Personal (this machine, all projects):** symlink each into your personal skills folder:
   ```bash
   ln -s "$(pwd)/skills/test-suite-architect" ~/.claude/skills/test-suite-architect
   ln -s "$(pwd)/skills/review-test-suite"   ~/.claude/skills/review-test-suite
+  ln -s "$(pwd)/skills/bug-reporter"        ~/.claude/skills/bug-reporter
   ```
   Edit once here; every Claude Code project sees the change. Note: a symlink is a local
   convenience — it does **not** travel to other machines/teammates or to claude.ai.
