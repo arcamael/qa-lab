@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import 'dotenv/config'; // load BASE_URL (and friends) from .env so no manual `export` is needed
 
 /**
  * Generalized starter config. Two things are deliberate and should survive into any SUT:
